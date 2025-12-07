@@ -215,10 +215,12 @@ Custom commands available via `/command`:
 | `/sweep`              | Codebase cleanup: type errors, lint, dead code                       |
 | `/focus <bead-id>`    | Start focused session on specific bead                               |
 | `/context-dump`       | Dump state for model switch or context recovery                      |
+| `/checkpoint`         | Compress context: summarize session, preserve decisions              |
+| `/retro <bead-id>`    | Post-mortem: extract learnings, update knowledge files               |
 | `/worktree-task <id>` | Create git worktree for isolated bead work                           |
 | `/commit`             | Smart commit with conventional format + beads refs                   |
 | `/pr-create`          | Create PR with beads linking + smart summary                         |
-| `/debug <error>`      | Investigate error, trace cause, suggest fix                          |
+| `/debug <error>`      | Investigate error, check known patterns first                        |
 | `/iterate <task>`     | Evaluator-optimizer loop: generate, critique, improve until good     |
 | `/triage <request>`   | Intelligent routing: classify and dispatch to right handler          |
 | `/repo-dive <repo>`   | Deep analysis of GitHub repo with autopsy tools                      |
@@ -241,6 +243,15 @@ Direct. Terse. No fluff. We're sparring partners - disagree when I'm wrong. Curs
 <documentation_style>
 use JSDOC to document components and functions
 </documentation_style>
+
+## Knowledge Files (Load On-Demand)
+
+Reference these when relevant - don't preload everything:
+
+- **Debugging/Errors**: @knowledge/error-patterns.md - Check FIRST when hitting errors
+- **Next.js**: @knowledge/nextjs-patterns.md - RSC, caching, App Router gotchas
+- **Effect-TS**: @knowledge/effect-patterns.md - Services, Layers, Schema, error handling
+- **Agent Patterns**: @knowledge/mastra-agent-patterns.md - Multi-agent coordination, context engineering
 
 ## Code Philosophy
 

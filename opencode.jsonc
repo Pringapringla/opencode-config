@@ -27,10 +27,10 @@
   },
   
   // === Instructions ===
+  // Only AGENTS.md and CLAUDE.md are auto-loaded
+  // Knowledge files (knowledge/*.md) are loaded on-demand via @path references
   "instructions": [
-    "~/.claude/CLAUDE.md",
-    "~/.config/**/README.md",
-    "~/.config/**/*.md"
+    "~/.claude/CLAUDE.md"
   ],
   
   // === Permissions ===
