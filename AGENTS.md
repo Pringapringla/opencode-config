@@ -36,6 +36,36 @@ For Next.js projects, use the Next.js MCP tools when available.
 - **pdf-library\_\*** - PDF knowledge base in ~/Documents/.pdf-library/ (iCloud sync): `add`, `read`, `list`, `search`, `remove`, `tag`, `refresh`, `batch_add`, `stats`
   </tool_preferences>
 
+<context_preservation>
+**CRITICAL: These rules prevent context exhaustion. Violating them burns tokens and kills sessions.**
+
+### Agent Mail - MANDATORY constraints
+
+- **ALWAYS** use `include_bodies: false` on `fetch_inbox` - get headers only, fetch full body individually when needed
+- **ALWAYS** limit `inbox_limit` to 5 max (not the default 20)
+- **ALWAYS** use `summarize_thread` instead of fetching all messages in a thread
+- **NEVER** call `fetch_inbox` with `include_bodies: true` unless you need exactly ONE message body
+
+### Documentation Tools (context7, effect-docs) - MANDATORY constraints
+
+- **NEVER** call these directly in the main conversation - they dump entire doc pages
+- **ALWAYS** use Task subagent for doc lookups - subagent returns a summary, not the raw dump
+- Front-load doc research at session start if needed, don't lookup mid-session
+- If you must use directly, be extremely specific with topic/query to minimize output
+
+### Search Tools (Glob, Grep, repo-autopsy)
+
+- Use specific patterns, never `**/*` or broad globs
+- Prefer Task subagent for exploratory searches - keeps results out of main context
+- For repo-autopsy, use `maxResults` parameter to limit output
+
+### General Context Hygiene
+
+- Use `/checkpoint` proactively before context gets heavy
+- Prefer Task subagents for any multi-step exploration
+- Summarize findings in your response, don't just paste tool output
+  </context_preservation>
+
 <thinking_triggers>
 Use extended thinking ("think hard", "think harder", "ultrathink") for:
 

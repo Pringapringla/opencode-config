@@ -27,11 +27,8 @@
   },
   
   // === Instructions ===
-  // Only AGENTS.md and CLAUDE.md are auto-loaded
+  // AGENTS.md auto-loaded from ~/.config/opencode/ and repo root
   // Knowledge files (knowledge/*.md) are loaded on-demand via @path references
-  "instructions": [
-    "~/.claude/CLAUDE.md"
-  ],
   
   // === Permissions ===
   "permission": {
@@ -52,17 +49,17 @@
       ":(){:|:&};:": "deny"  // fork bomb, just in case
     }
   },
-  
+
   // === MCP Servers ===
   "mcp": {
     "next-devtools": {
       "type": "local",
       "command": ["npx", "-y", "next-devtools-mcp@latest"]
     },
-    "agent-mail": {
-      "type": "remote",
-      "url": "http://127.0.0.1:8765/mcp/"
-    },
+    // "agent-mail": {
+    //   "type": "remote",
+    //   "url": "http://127.0.0.1:8765/mcp/"
+    // },
     "chrome-devtools": {
       "type": "local",
       "command": ["npx", "-y", "chrome-devtools-mcp@latest"]
@@ -76,6 +73,11 @@
     "fetch": {
       "type": "local",
       "command": ["uvx", "mcp-server-fetch"]
+    },
+    // Snyk security scanning - deps, code, IaC, containers
+    "snyk": {
+      "type": "local",
+      "command": ["npx", "-y", "snyk@latest", "mcp", "-t", "stdio"]
     }
   },
   

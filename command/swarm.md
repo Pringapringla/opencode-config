@@ -14,14 +14,15 @@ You are a swarm coordinator. Take a complex task, break it into beads, and unlea
 
 **Default behavior: Feature branch + PR with context sync.** All swarm work goes to a feature branch, agents share context mid-task, and creates a PR for review.
 
-## Step 1: Register as Coordinator
+## Step 1: Initialize Session
+
+Use the plugin's agent-mail tools to register:
 
 ```
-agent-mail: ensure_project(human_key="$PWD")
-agent-mail: register_agent(project_key="$PWD", program="opencode", model="claude-sonnet-4", task_description="Swarm coordinator: <task>")
+agent-mail:init with project_key=$PWD, program="opencode", model="claude-sonnet-4", task_description="Swarm coordinator: <task>"
 ```
 
-Remember your agent name - you'll give it to subagents.
+This returns your agent name and session state. Remember it.
 
 ## Step 2: Create Feature Branch
 
@@ -40,155 +41,80 @@ git push -u origin HEAD
 
 If given a bead-id:
 
-```bash
-bd show $BEAD_ID --json
+```
+beads:query with id=<bead-id>
 ```
 
 If given a description, analyze it to understand scope.
 
 ## Step 4: Decompose into Beads
 
-Break the task into parallelizable units. Create beads for each:
+Use the swarm decomposition tool to break down the task:
 
-```bash
-# If parent bead exists, children auto-number (bd-xxx.1, bd-xxx.2, etc)
-bd create "Subtask 1" -p 2 --parent $PARENT_ID --json
-bd create "Subtask 2" -p 2 --parent $PARENT_ID --json
-bd create "Subtask 3" -p 2 --parent $PARENT_ID --json
+```
+swarm:decompose with task="<task description>", context="<relevant codebase context>"
+```
 
-# Or create standalone if no parent
-bd create "Subtask 1" -p 2 --json
+This returns a structured decomposition with subtasks. Then create beads:
+
+```
+beads:create_epic with title="<parent task>", subtasks=[{title, description, files, priority}...]
 ```
 
 **Decomposition rules:**
 
 - Each bead should be completable by one agent
 - Beads should be independent (parallelizable) where possible
-- If there are dependencies, use `bd dep add BLOCKED BLOCKER`
+- If there are dependencies, use `beads:link_thread` to connect them
 - Aim for 3-7 beads per swarm (too many = coordination overhead)
 
-## Step 5: Identify File Ownership
+## Step 5: Reserve Files
 
-For each bead, identify which files it will touch:
+For each subtask, reserve the files it will touch:
 
-```bash
-# Use grep/glob to find relevant files per subtask
-rg "pattern" src -l
+```
+agent-mail:reserve with project_key=$PWD, agent_name=<YOUR_NAME>, paths=[<files>], reason="<bead-id>"
 ```
 
 **Conflict prevention:**
 
 - No two agents should edit the same file
 - If overlap exists, merge beads or sequence them
-- Use Agent Mail file reservations
 
 ## Step 6: Spawn the Swarm
 
 **CRITICAL: Spawn ALL agents in a SINGLE message with multiple Task calls.**
 
-All agents share a common thread for context sync: `thread_id = <parent-bead-id>` (or generated swarm ID for ad-hoc tasks).
+Use the prompt generator for each subtask:
 
-For each bead, spawn an agent:
+```
+swarm:subtask_prompt with bead_id="<bead-id>", coordinator_name="<YOUR_NAME>", branch="swarm/<parent-id>", files=[<files>], sync_enabled=true
+```
 
-````
+Then spawn agents with the generated prompts:
+
+```
 Task(
   subagent_type="general",
   description="Swarm worker: <bead-title>",
-  prompt="You are a swarm worker. Your coordinator is <COORDINATOR_NAME>.
-
-## Swarm Context
-- **Branch**: swarm/<bead-id> (NEVER push to main)
-- **Repo**: $PWD
-- **Parent bead**: <parent-bead-id>
-- **Your bead**: <bead-id>
-- **Swarm thread**: <parent-bead-id> (use as thread_id for all messages)
-
-## Setup
-1. Register with Agent Mail:
-   - ensure_project(human_key='$PWD')
-   - register_agent(project_key='$PWD', program='opencode', model='claude-sonnet-4', task_description='<bead-title>')
-
-2. Checkout the swarm branch:
-   ```bash
-   git fetch origin
-   git checkout swarm/<parent-bead-id>
-   git pull
-````
-
-3. Reserve your files:
-   - file_reservation_paths(project_key='$PWD', agent_name='YOUR_NAME', paths=[<files>], exclusive=true, reason='<bead-id>')
-
-4. Mark bead in-progress:
-   ```bash
-   bd update <bead-id> --status in_progress
-   ```
-
-## Your Task
-
-<bead description and specific instructions>
-
-## Files You Own
-
-<list of files this agent can edit>
-
-## Mid-Task Context Sync (unless --no-sync)
-
-At ~50% completion (before committing), share your progress with the swarm:
-
-```
-send_message(
-  project_key='$PWD',
-  sender_name='YOUR_NAME',
-  to=['<COORDINATOR_NAME>'],
-  subject='Progress: <bead-id>',
-  body_md='## Status: In Progress (~50%)\n\n## Decisions Made\n- <key architectural choices>\n- <patterns you're using>\n\n## Discoveries\n- <anything other agents should know>\n- <shared types/interfaces created>\n\n## Blockers\n- <any issues that might affect others>\n\n## Files Touched So Far\n- <list>',
-  thread_id='<parent-bead-id>'
+  prompt="<output from swarm:subtask_prompt>"
 )
 ```
 
-Then **check for coordinator updates** before finalizing:
+Spawn ALL agents in parallel in a single response.
+
+## Step 7: Monitor Progress (unless --no-sync)
+
+Check swarm status:
 
 ```
-fetch_inbox(project_key='$PWD', agent_name='YOUR_NAME', since_ts='<your_start_time>')
+swarm:status with epic_id="<parent-bead-id>"
 ```
 
-If coordinator sent shared context or compatibility guidance, incorporate it before completing.
-
-## Completion
-
-1. Run type check: `pnpm exec tsc --noEmit`
-2. Commit: `git add <your files> && git commit -m 'feat(<scope>): <bead-title>'`
-3. Push to swarm branch: `git push origin swarm/<parent-bead-id>`
-4. Close bead: `bd close <bead-id> --reason 'Done: <summary>'`
-5. Release reservations: release_file_reservations(...)
-6. Report to coordinator:
-   ```
-   send_message(
-     project_key='$PWD',
-     sender_name='YOUR_NAME',
-     to=['<COORDINATOR_NAME>'],
-     subject='Completed: <bead-id>',
-     body_md='## Summary\n<what you did>\n\n## Key Decisions\n<architectural choices made>\n\n## Patterns Used\n<reusable patterns other agents should know>\n\n## Files Changed\n<list>',
-     thread_id='<parent-bead-id>'
-   )
-   ```
-
-Return a summary of what was completed."
-)
+Monitor inbox for progress updates:
 
 ```
-
-## Step 7: Context Sync Checkpoint (unless --no-sync)
-
-After spawning, actively monitor the swarm thread for mid-task updates:
-
-```
-
-# Monitor swarm thread for progress updates
-
-search_messages(project_key="$PWD", query="Progress:", limit=20)
-fetch_inbox(project_key="$PWD", agent_name="<YOUR_NAME>")
-
+agent-mail:inbox with project_key=$PWD, agent_name=<YOUR_NAME>
 ```
 
 **When you receive progress updates:**
@@ -197,153 +123,81 @@ fetch_inbox(project_key="$PWD", agent_name="<YOUR_NAME>")
 2. **Check for pattern conflicts** - Different approaches to the same problem?
 3. **Identify shared concerns** - Common blockers or discoveries?
 
-**If you spot incompatibilities or need to broadcast shared context:**
+**If you spot incompatibilities, broadcast shared context:**
 
 ```
-
-send_message(
-project_key='$PWD',
-sender_name='<YOUR_NAME>',
-to=['<AGENT_1>', '<AGENT_2>', ...], # Or specific agents
-subject='Coordinator Update: Shared Context',
-body_md='## Compatibility Guidance\n<resolve conflicting approaches>\n\n## Shared Patterns\n<patterns all agents should use>\n\n## Required Interfaces\n<types/interfaces for interop>\n\n## Blockers Resolved\n<solutions to reported blockers>',
-thread_id='<parent-bead-id>',
-importance='high'
-)
-
+agent-mail:send with project_key=$PWD, sender_name=<YOUR_NAME>, to=[<agents>], subject="Coordinator Update", body_md="<guidance>", thread_id="<parent-bead-id>", importance="high"
 ```
 
-**Skip this step if:**
-- Using `--no-sync` flag
-- Tasks are truly independent (no shared types, no integration points)
-- Simple mechanical changes (find/replace, formatting)
+## Step 8: Collect Results
 
-## Step 8: Monitor and Collect Results
+When agents complete, they send completion messages. Summarize the thread:
 
-After context sync, continue monitoring for completion messages:
+```
+agent-mail:summarize_thread with project_key=$PWD, thread_id="<parent-bead-id>"
 ```
 
-agent-mail: fetch_inbox(project_key="$PWD", agent_name="<YOUR_NAME>")
+## Step 9: Complete Swarm
 
-````
+Use the swarm completion tool:
 
-## Step 9: Coordinator Synthesis (unless --no-sync)
+```
+swarm:complete with epic_id="<parent-bead-id>", summary="<what was accomplished>"
+```
 
-Before creating the PR, synthesize all agent outputs to catch conflicts:
+This:
 
-1. **Review full swarm thread:**
-   ```
-   summarize_thread(project_key="$PWD", thread_id="<parent-bead-id>", include_examples=true)
-   ```
-
-2. **Check for incompatibilities:**
-   - Conflicting type definitions
-   - Different naming conventions used
-   - Inconsistent patterns or approaches
-   - Missing integration between components
-
-3. **If conflicts found, spawn reconciliation agent:**
-   ```
-   Task(
-     description="Reconciliation: Fix swarm conflicts",
-     prompt="You are a reconciliation agent. The swarm has conflicts that need resolution.
-
-   ## Conflicts Identified
-   <list of specific conflicts>
-
-   ## Thread Summary
-   <output from summarize_thread>
-
-   ## Your Task
-   1. Register with Agent Mail
-   2. Checkout swarm branch
-   3. Fix the incompatibilities:
-      - Unify type definitions
-      - Resolve naming conflicts
-      - Add missing integration code
-   4. Commit: 'fix: reconcile swarm outputs'
-   5. Report resolution to coordinator"
-   )
-   ```
-
-4. **If no conflicts, proceed to PR creation.**
+- Verifies all subtasks are closed
+- Releases file reservations
+- Closes the parent bead
+- Syncs beads to git
 
 ## Step 10: Create PR
 
-Once all agents complete (and reconciliation if needed):
+```bash
+gh pr create --title "feat: <parent bead title>" --body "$(cat <<'EOF'
+## Summary
+<1-3 bullet points from swarm results>
 
-1. **Verify all beads closed:**
-   ```bash
-   bd list --parent $PARENT_ID --json  # All should be closed
-   ```
+## Beads Completed
+- <bead-id>: <summary>
+- <bead-id>: <summary>
 
-2. **Close parent bead (if exists):**
+## Files Changed
+<aggregate list>
 
-   ```bash
-   bd close $PARENT_ID --reason "Swarm complete: N subtasks done"
-   ```
+## Testing
+- [ ] Type check passes
+- [ ] Tests pass (if applicable)
+EOF
+)"
+```
 
-3. **Sync beads:**
+Report summary:
 
-   ```bash
-   bd sync
-   ```
+```markdown
+## Swarm Complete: <task>
 
-4. **Create PR:**
+### PR: #<number>
 
-   ```bash
-   gh pr create --title "feat: <parent bead title>" --body "$(cat <<'EOF'
-   ## Summary
-   <1-3 bullet points from swarm results>
+### Agents Spawned: N
 
-   ## Beads Completed
-   - <bead-id>: <summary>
-   - <bead-id>: <summary>
+### Beads Closed: N
 
-   ## Files Changed
-   <aggregate list>
+### Work Completed
 
-   ## Context Sync Notes
-   <any compatibility issues resolved, shared patterns established>
+- [bead-id]: [summary]
 
-   ## Testing
-   - [ ] Type check passes
-   - [ ] Tests pass (if applicable)
-   EOF
-   )"
-   ```
+### Files Changed
 
-5. **Report summary:**
-
-   ```markdown
-   ## Swarm Complete: <task>
-
-   ### PR: #<number>
-
-   ### Agents Spawned: N
-
-   ### Beads Closed: N
-
-   ### Context Sync
-   - Mid-task updates received: N
-   - Coordinator interventions: N
-   - Reconciliation needed: yes/no
-
-   ### Work Completed
-
-   - [bead-id]: [summary]
-   - [bead-id]: [summary]
-
-   ### Files Changed
-
-   - [aggregate list]
-   ```
+- [aggregate list]
+```
 
 ## Failure Handling
 
 If an agent fails:
 
-- Check its messages for error details
+- Check its messages: `agent-mail:inbox`
 - The bead remains in-progress
 - Manually investigate or re-spawn
 
@@ -360,8 +214,6 @@ Only use when explicitly requested. Skips branch/PR:
 - Automated migrations with high confidence
 - User explicitly says "push to main"
 
-In this mode, workers push directly to main instead of the swarm branch.
-
 ## No-Sync Mode (--no-sync)
 
 Skip mid-task context sharing when tasks are truly independent:
@@ -369,13 +221,11 @@ Skip mid-task context sharing when tasks are truly independent:
 - Simple mechanical changes (find/replace, formatting, lint fixes)
 - Tasks with zero integration points
 - Completely separate feature areas with no shared types
-- Time-sensitive work where sync overhead isn't worth it
 
 In this mode:
+
 - Agents skip the mid-task progress message
-- Agents skip checking inbox before finalizing
-- Coordinator skips Step 7 (Context Sync Checkpoint)
-- Coordinator skips Step 9 (Synthesis) unless conflicts are obvious in completion messages
+- Coordinator skips Step 7 (monitoring)
+- Faster execution, less coordination overhead
 
 **Default is sync ON** - prefer sharing context. Use `--no-sync` deliberately.
-````
